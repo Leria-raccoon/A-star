@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Физика Грозового Облака</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a1128;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #stormCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a1128 0%, #0d1b3a 50%, #152642 100%);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .header {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(13, 27, 58, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            border: 1px solid #1e3a5f;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 2.8em;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #64b5f6, #90caf9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 20px rgba(100, 181, 246, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.3em;
+            color: #b0b0b0;
+            opacity: 0.9;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            pointer-events: all;
+        }
+
+        .control-btn {
+            padding: 16px 32px;
+            background: linear-gradient(145deg, #1e3a5f, #152642);
+            color: #ffffff;
+            border: 2px solid #2d4d7a;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(145deg, #2d4d7a, #1e3a5f);
+            border-color: #3d5d8a;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .control-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .status-panel {
+            position: absolute;
+            top: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 27, 58, 0.95);
+            padding: 25px 35px;
+            border-radius: 15px;
+            border: 1px solid #1e3a5f;
+            backdrop-filter: blur(15px);
+            text-align: center;
+            min-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-title {
+            font-size: 1.4em;
+            color: #64b5f6;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .status-description {
+            color: #e0e0e0;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+
+        .lightning-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0);
+            pointer-events: none;
+            transition: background 0.1s ease;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="stormCanvas"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="header">
+                <h1>⚡ ФИЗИКА ГРОЗОВОГО ОБЛАКА</h1>
+                <div class="subtitle">Интерактивная симуляция образования молний</div>
+            </div>
+
+            <div class="status-panel">
+                <div class="status-title" id="statusTitle">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ</div>
+                <div class="status-description" id="statusDescription">Загрузка физической модели облака...</div>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn" onclick="startFormation()">🌫️ ОБРАЗОВАНИЕ</button>
+                <button class="control-btn" onclick="addTurbulence()">🌀 ТУРБУЛЕНТНОСТЬ</button>
+                <button class="control-btn" onclick="separateCharges()">⚡ РАЗДЕЛЕНИЕ</button>
+                <button class="control-btn" onclick="triggerLightning()">🌩️ МОЛНИЯ</button>
+                <button class="control-btn" onclick="resetSystem()">🔄 СБРОС</button>
+            </div>
+
+            <div class="lightning-flash" id="lightningFlash"></div>
+        </div>
+    </div>
+
+    <script>
+        class AdvancedStormSimulator {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.cloudCells = [];
+                this.lightning = null;
+                this.phase = 0;
+                this.turbulence = 0;
+                this.chargeSeparation = 0;
+                this.voltage = 0;
+                this.groundLevel = 0;
+                
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                this.init();
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.centerX = this.canvas.width / 2;
+                this.centerY = this.canvas.height / 2 - 100;
+                this.groundLevel = this.canvas.height - 150;
+            }
+            
+            init() {
+                this.createRealisticCloud();
+                this.animate();
+            }
+            
+            createRealisticCloud() {
+                this.cloudCells = [];
+                
+                // Основное тело облака
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const distance = 150 + Math.random() * 50;
+                    const x = this.centerX + Math.cos(angle) * distance;
+                    const y = this.centerY + Math.sin(angle) * distance * 0.4;
+                    const size = 80 + Math.random() * 60;
+                    
+                    this.cloudCells.push({ x, y, size, opacity: 0 });
+                }
+                
+                // Дополнительные ячейки для объема
+                for (let i = 0; i < 12; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * 200;
+                    const x = this.centerX + Math.cos(angle) * distance;
+                    const y = this.centerY + Math.sin(angle) * distance * 0.3;
+                    const size = 40 + Math.random() * 50;
+                    
+                    this.cloudCells.push({ x, y, size, opacity: 0 });
+                }
+                
+                // Создаем частицы
+                this.particles = [];
+                for (let i = 0; i < 400; i++) {
+                    const cell = this.cloudCells[Math.floor(Math.random() * this.cloudCells.length)];
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * cell.size * 0.8;
+                    
+                    this.particles.push({
+                        x: cell.x + Math.cos(angle) * distance,
+                        y: cell.y + Math.sin(angle) * distance,
+                        vx: 0,
+                        vy: 0,
+                        radius: 2 + Math.random() * 4,
+                        charge: 0,
+                        type: 'neutral',
+                        mass: 0.5 + Math.random() * 1.5,
+                        cellIndex: this.cloudCells.indexOf(cell),
+                        originalX: cell.x + Math.cos(angle) * distance,
+                        originalY: cell.y + Math.sin(angle) * distance
+                    });
+                }
+                
+                // Плавное появление облака
+                let opacity = 0;
+                const appearInterval = setInterval(() => {
+                    opacity += 0.02;
+                    this.cloudCells.forEach(cell => {
+                        cell.opacity = Math.min(1, opacity);
+                    });
+                    if (opacity >= 1) {
+                        clearInterval(appearInterval);
+                        this.updateStatus("Облако сформировано", "Готово к запуску процессов");
+                    }
+                }, 30);
+            }
+            
+            updateStatus(title, description) {
+                document.getElementById('statusTitle').textContent = title;
+                document.getElementById('statusDescription').textContent = description;
+            }
+            
+            startFormation() {
+                this.updateStatus("Формирование облака", "Конденсация водяного пара на частицах пыли");
+            }
+            
+            addTurbulence() {
+                this.turbulence = Math.min(100, this.turbulence + 25);
+                this.updateStatus("Турбулентность", "Столкновения частиц в восходящих потоках");
+            }
+            
+            separateCharges() {
+                this.updateStatus("Разделение зарядов", "Легкие положительные ионы поднимаются, тяжелые отрицательные опускаются");
+                
+                // Четкое разделение зарядов
+                this.particles.forEach(particle => {
+                    if (particle.mass < 1.0) {
+                        particle.charge = 1;
+                        particle.type = 'positive';
+                    } else {
+                        particle.charge = -1;
+                        particle.type = 'negative';
+                    }
+                });
+            }
+            
+            triggerLightning() {
+                this.updateStatus("МОЛНИЯ!", "Происходит электрический пробой воздуха");
+                
+                // Создаем эффект вспышки
+                const flash = document.getElementById('lightningFlash');
+                flash.style.background = 'rgba(255, 255, 255, 0.8)';
+                setTimeout(() => {
+                    flash.style.background = 'rgba(255, 255, 255, 0)';
+                }, 100);
+                
+                // Находим самые нижние отрицательные частицы для начала молнии
+                const negativeParticles = this.particles
+                    .filter(p => p.type === 'negative')
+                    .sort((a, b) => b.y - a.y)
+                    .slice(0, 5);
+                
+                if (negativeParticles.length > 0) {
+                    this.lightning = {
+                        branches: [],
+                        startTime: Date.now()
+                    };
+                    
+                    // Создаем молнии от отрицательных частиц к земле
+                    negativeParticles.forEach(particle => {
+                        this.lightning.branches.push({
+                            startX: particle.x,
+                            startY: particle.y,
+                            endX: particle.x + (Math.random() - 0.5) * 200,
+                            endY: this.groundLevel,
+                            progress: 0,
+                            segments: this.generateLightningPath(particle.x, particle.y, particle.x + (Math.random() - 0.5) * 200, this.groundLevel)
+                        });
+                    });
+                }
+                
+                // Автоматический сброс через 3 секунды
+                setTimeout(() => {
+                    this.resetToNeutral();
+                }, 3000);
+            }
+            
+            generateLightningPath(startX, startY, endX, endY) {
+                const segments = [];
+                const numSegments = 25;
+                const maxDeviation = 100;
+                
+                for (let i = 0; i <= numSegments; i++) {
+                    const t = i / numSegments;
+                    const x = startX + (endX - startX) * t;
+                    const y = startY + (endY - startY) * t;
+                    
+                    const deviationFactor = Math.sin(t * Math.PI);
+                    const deviation = maxDeviation * deviationFactor * (Math.random() - 0.5) * 2;
+                    const devX = x + Math.cos(t * Math.PI * 3) * deviation;
+                    const devY = y + Math.sin(t * Math.PI * 3) * deviation;
+                    
+                    segments.push({ x: devX, y: devY });
+                }
+                
+                return segments;
+            }
+            
+            resetToNeutral() {
+                this.particles.forEach(p => {
+                    p.charge = 0;
+                    p.type = 'neutral';
+                    const cell = this.cloudCells[p.cellIndex];
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * cell.size * 0.8;
+                    p.originalX = cell.x + Math.cos(angle) * distance;
+                    p.originalY = cell.y + Math.sin(angle) * distance;
+                });
+                this.lightning = null;
+                this.turbulence = 0;
+                this.voltage = 0;
+                this.chargeSeparation = 0;
+                this.updateStatus("Система сброшена", "Готово к новому циклу");
+            }
+            
+            updateParticles() {
+                // Четкое разделение зарядов
+                if (this.phase === 3) {
+                    this.chargeSeparation = Math.min(1, this.chargeSeparation + 0.01);
+                    this.voltage = Math.min(100000000, this.voltage + 10000000 * this.chargeSeparation);
+                    
+                    this.particles.forEach(particle => {
+                        if (particle.type === 'positive') {
+                            particle.vy -= 0.15 * this.chargeSeparation;
+                            if (particle.y < this.centerY - 200) {
+                                particle.vy = Math.max(particle.vy, 0);
+                            }
+                        } else if (particle.type === 'negative') {
+                            particle.vy += 0.15 * this.chargeSeparation;
+                            if (particle.y > this.groundLevel - 50) {
+                                particle.vy = Math.min(particle.vy, 0);
+                            }
+                        }
+                    });
+                }
+                
+                // Турбулентное движение
+                this.particles.forEach(particle => {
+                    if (this.turbulence > 0 && this.phase < 3) {
+                        particle.vx += (Math.random() - 0.5) * 0.1 * (this.turbulence / 25);
+                        particle.vy += (Math.random() - 0.5) * 0.1 * (this.turbulence / 25);
+                    }
+                    
+                    // Возвращающая сила к ячейке облака
+                    if (this.phase < 3) {
+                        const cell = this.cloudCells[particle.cellIndex];
+                        const dx = particle.originalX - particle.x;
+                        const dy = particle.originalY - particle.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance > 5) {
+                            particle.vx += dx * 0.02;
+                            particle.vy += dy * 0.02;
+                        }
+                    }
+                    
+                    // Обновление позиции
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    // Демпфирование
+                    particle.vx *= 0.95;
+                    particle.vy *= 0.95;
+                });
+            }
+            
+            drawGround() {
+                // Рисуем землю
+                const gradient = this.ctx.createLinearGradient(0, this.groundLevel, 0, this.canvas.height);
+                gradient.addColorStop(0, '#2d5a27');
+                gradient.addColorStop(1, '#1e3a1a');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, this.groundLevel, this.canvas.width, this.canvas.height - this.groundLevel);
+                
+                // Добавляем текстуру земли
+                this.ctx.fillStyle = '#3a6b32';
+                for (let i = 0; i < 50; i++) {
+                    const x = (i * 47) % this.canvas.width;
+                    const size = 3 + Math.random() * 5;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, this.groundLevel + 10, size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+            
+            drawRealisticCloud() {
+                // Рисуем ячейки облака
+                this.cloudCells.forEach(cell => {
+                    const gradient = this.ctx.createRadialGradient(
+                        cell.x, cell.y, 0,
+                        cell.x, cell.y, cell.size
+                    );
+                    gradient.addColorStop(0, `rgba(255, 255, 255, ${0.4 * cell.opacity})`);
+                    gradient.addColorStop(0.5, `rgba(220, 220, 220, ${0.25 * cell.opacity})`);
+                    gradient.addColorStop(1, `rgba(180, 180, 180, ${0.1 * cell.opacity})`);
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cell.x, cell.y, cell.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Контур ячейки
+                    this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.15 * cell.opacity})`;
+                    this.ctx.lineWidth = 1;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cell.x, cell.y, cell.size, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                });
+            }
+            
+            drawParticles() {
+                this.particles.forEach(particle => {
+                    let color;
+                    switch(particle.type) {
+                        case 'positive':
+                            color = '#ff6b6b';
+                            break;
+                        case 'negative':
+                            color = '#4ecdc4';
+                            break;
+                        default:
+                            color = '#e0e0e0';
+                    }
+                    
+                    // Свечение заряженных частиц
+                    if (particle.charge !== 0) {
+                        const glow = this.ctx.createRadialGradient(
+                            particle.x, particle.y, 0,
+                            particle.x, particle.y, particle.radius * 3
+                        );
+                        glow.addColorStop(0, color);
+                        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                        
+                        this.ctx.fillStyle = glow;
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.radius * 3, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                    
+                    this.ctx.fillStyle = color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+            
+            drawLightning() {
+                if (!this.lightning) return;
+                
+                const elapsed = Date.now() - this.lightning.startTime;
+                const progress = Math.min(1, elapsed / 800);
+                
+                this.lightning.branches.forEach(branch => {
+                    branch.progress = progress;
+                    
+                    this.ctx.strokeStyle = '#ffe66d';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = '#ffe66d';
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(branch.segments[0].x, branch.segments[0].y);
+                    
+                    const visibleSegments = Math.floor(branch.segments.length * branch.progress);
+                    
+                    for (let i = 1; i < visibleSegments; i++) {
+                        this.ctx.lineTo(branch.segments[i].x, branch.segments[i].y);
+                    }
+                    
+                    this.ctx.stroke();
+                    
+                    // Свечение на кончике
+                    if (visibleSegments > 1 && branch.progress < 0.95) {
+                        const tip = branch.segments[visibleSegments - 1];
+                        const glow = this.ctx.createRadialGradient(
+                            tip.x, tip.y, 0,
+                            tip.x, tip.y, 30
+                        );
+                        glow.addColorStop(0, 'rgba(255, 230, 109, 0.9)');
+                        glow.addColorStop(1, 'rgba(255, 230, 109, 0)');
+                        
+                        this.ctx.fillStyle = glow;
+                        this.ctx.beginPath();
+                        this.ctx.arc(tip.x, tip.y, 30, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                });
+                
+                this.ctx.shadowBlur = 0;
+            }
+            
+            drawStars() {
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                for (let i = 0; i < 80; i++) {
+                    const x = (i * 123.456) % this.canvas.width;
+                    const y = (i * 76.543) % (this.groundLevel - 100);
+                    const size = 0.5 + (i % 3) * 0.5;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+            
+            draw() {
+                // Очистка
+                this.ctx.fillStyle = '#0a1128';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Рисуем звезды
+                this.drawStars();
+                
+                // Рисуем землю
+                this.drawGround();
+                
+                this.drawRealisticCloud();
+                this.drawParticles();
+                this.drawLightning();
+            }
+            
+            animate() {
+                this.updateParticles();
+                this.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Инициализация
+        const canvas = document.getElementById('stormCanvas');
+        const simulator = new AdvancedStormSimulator(canvas);
+
+        // Глобальные функции управления
+        function startFormation() {
+            simulator.startFormation();
+        }
+        
+        function addTurbulence() {
+            simulator.addTurbulence();
+        }
+        
+        function separateCharges() {
+            simulator.separateCharges();
+        }
+        
+        function triggerLightning() {
+            simulator.triggerLightning();
+        }
+        
+        function resetSystem() {
+            simulator.resetToNeutral();
+        }
+
+        // Автодемонстрация
+        setTimeout(() => {
+            startFormation();
+            setTimeout(() => {
+                addTurbulence();
+                setTimeout(() => {
+                    separateCharges();
+                    setTimeout(() => {
+                        triggerLightning();
+                    }, 3000);
+                }, 2000);
+            }, 2000);
+        }, 1000);
+    </script>
+</body>
+</html>
