@@ -1,0 +1,375 @@
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+
+            background: rgb(39, 39, 42);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+
+
+
+        }
+
+        html,
+        body {
+            overscroll-behavior-x: none;
+            /* 👈 отключает горизонтальную навигацию браузера */
+            overscroll-behavior-y: none;
+            /* 👈 отключает "отпрыгивание" вверх/вниз */
+        }
+
+        .litle {
+            color: #dfe6f2;
+            font-size: 38px;
+            text-align: center;
+            /* центрирует текст */
+            padding-top: 100px;
+            padding-bottom: 40px;
+            width: 100%;
+            /* чтобы занимала всю ширину */
+            font-weight: 600;
+
+        }
+
+        .simulation-container {
+            width: 90%;
+            max-width: 1200px;
+            height: 70vh;
+
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        #stormCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls-container {
+            width: 90%;
+            max-width: 1200px;
+
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .phases-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .phase-btn {
+            padding: 20px 25px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 19px;
+            font-weight: 600;
+            color: #1e3a5f;
+            text-align: center;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .phase-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
+            background: #f8f9fa;
+        }
+
+        .phase-btn.active {
+            background: #64b5f6;
+            color: white;
+            box-shadow: 0 0 15px rgba(100, 181, 246, 0.5);
+        }
+
+        .lightning-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0);
+            pointer-events: none;
+            transition: background 0.1s ease;
+            z-index: 5;
+        }
+
+        p {
+            margin-bottom: 15px;
+            /* расстояние СНИЗУ каждого абзаца */
+        }
+
+        #bgVideo {
+            position: relative;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            object-fit: cover;
+            /* заполняет весь экран, не искажаясь */
+            z-index: -1;
+            /* помещаем под контент */
+            pointer-events: none;
+            /* чтобы видео не блокировало клики */
+        }
+
+        .navbar {
+            position: fixed;
+            /* прикрепляем сверху */
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            /* полупрозрачный фон */
+            backdrop-filter: blur(6px);
+            /* лёгкое размытие */
+            padding: 10px 0;
+            z-index: 1000;
+            /* поверх всего */
+        }
+
+        .navbar ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .navbar a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .navbar a:hover {
+            color: #64b5f6;
+        }
+
+        .slider-container {
+            position: relative;
+            width: 90%;
+            max-width: 1400px;
+            overflow: hidden;
+
+
+        }
+
+
+        .steps-wrapper {
+            display: flex;
+            gap: 30px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding: 20px;
+            scroll-snap-type: x proximity;
+            /* 👈 мягкое прилипание */
+            scroll-snap-stop: always;
+        }
+
+
+        .steps-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .step {
+            height: 400px;
+            flex: 0 0 calc(33.33% - 20px);
+            /* 3 карточки в ряд */
+            min-width: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid white;
+            border-radius: 25px;
+            padding: 30px;
+            box-sizing: border-box;
+            text-align: left;
+            scroll-snap-align: center;
+            transition: transform 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateY(-10px);
+            border-color: #64b5f6;
+            box-shadow: 0 0 20px rgba(100, 181, 246, 0.4);
+        }
+
+        .step h2 {
+            font-size: 20px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .step p {
+            color: #dfe6f2;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        /* красивые стрелочки */
+
+        /* на больших экранах чуть дальше */
+        @media (min-width: 1400px) {
+            .arrow.left {
+                left: 30px;
+            }
+
+            .arrow.right {
+                right: 30px;
+            }
+        }
+
+        .simulation-section {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 30px;
+            /* 👈 расстояние между симуляцией и панелью */
+            width: 90%;
+            max-width: 1400px;
+            margin-bottom: 30px;
+        }
+
+        .simulation-container {
+            flex: 1;
+            height: 70vh;
+            background: rgba(178, 176, 191, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls-container {
+            width: 280px;
+            /* 👈 ширина панели справа */
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .phases-grid {
+            display: flex;
+            flex-direction: column;
+            /* 👈 кнопки идут вертикально */
+            gap: 10px;
+        }
+
+        .video-overlay {
+            position: absolute;
+            /* Позволяет наложить текст на видео */
+            top: 50%;
+            /* Центрируем по вертикали */
+            left: 50%;
+            /* Центрируем по горизонтали */
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 10;
+            /* Поверх видео, но под навигацией */
+            text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .video-overlay h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .video-overlay p {
+            font-size: 20px;
+            opacity: 0.85;
+        }
+
+
+        .footer {
+            background-color: #1b1b1c;
+            color: white;
+            padding: 40px 8px 20px 20px;
+            margin-top: 50px;
+            width: 100%;
+            /* 👈 занимает всю ширину экрана */
+            position: relative;
+            left: 0;
+
+        }
+
+
+        .footer-content {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 30px;
+            /* Отступы между колонками */
+        }
+
+        .footer-section {
+            flex: 1;
+            min-width: 250px;
+            margin-bottom: 20px;
+        }
+
+        .footer-section h3 {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .footer-section a {
+            color: #ccc;
+            text-decoration: none;
+            display: block;
+            margin: 5px 0;
+        }
+
+        .footer-section a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #1e1d1f;
+            margin-top: 30px;
+        }
+
+        .scroll-hint {
+            text-align: center;
+            color: #aaa;
+            font-size: 16px;
+            margin-top: 10px;
+            animation: fadeHint 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes fadeHint {
+            from {
+                opacity: 0.5;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
